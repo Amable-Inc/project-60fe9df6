@@ -2,183 +2,167 @@
 
 import { useState } from 'react';
 
-interface Verse {
-  id: number;
-  book: string;
-  chapter: number;
-  verse: number;
+interface VerseData {
+  reference: string;
   text: string;
+  translation_id: string;
+  translation_name: string;
 }
 
-const verses: Verse[] = [
-  {
-    id: 1,
-    book: "Juan",
-    chapter: 3,
-    verse: 16,
-    text: "Porque de tal manera amó Dios al mundo, que ha dado a su Hijo unigénito, para que todo aquel que en él cree, no se pierda, mas tenga vida eterna."
-  },
-  {
-    id: 2,
-    book: "Salmos",
-    chapter: 23,
-    verse: 1,
-    text: "Jehová es mi pastor; nada me faltará."
-  },
-  {
-    id: 3,
-    book: "Filipenses",
-    chapter: 4,
-    verse: 13,
-    text: "Todo lo puedo en Cristo que me fortalece."
-  },
-  {
-    id: 4,
-    book: "Proverbios",
-    chapter: 3,
-    verse: 5,
-    text: "Fíate de Jehová de todo tu corazón, y no te apoyes en tu propia prudencia."
-  },
-  {
-    id: 5,
-    book: "Romanos",
-    chapter: 8,
-    verse: 28,
-    text: "Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien, esto es, a los que conforme a su propósito son llamados."
-  },
-  {
-    id: 6,
-    book: "Jeremías",
-    chapter: 29,
-    verse: 11,
-    text: "Porque yo sé los pensamientos que tengo acerca de vosotros, dice Jehová, pensamientos de paz, y no de mal, para daros el fin que esperáis."
-  },
-  {
-    id: 7,
-    book: "Mateo",
-    chapter: 11,
-    verse: 28,
-    text: "Venid a mí todos los que estáis trabajados y cargados, y yo os haré descansar."
-  },
-  {
-    id: 8,
-    book: "Isaías",
-    chapter: 40,
-    verse: 31,
-    text: "Pero los que esperan a Jehová tendrán nuevas fuerzas; levantarán alas como las águilas; correrán, y no se cansarán; caminarán, y no se fatigarán."
-  },
-  {
-    id: 9,
-    book: "Salmos",
-    chapter: 46,
-    verse: 1,
-    text: "Dios es nuestro amparo y fortaleza, nuestro pronto auxilio en las tribulaciones."
-  },
-  {
-    id: 10,
-    book: "Josué",
-    chapter: 1,
-    verse: 9,
-    text: "Mira que te mando que te esfuerces y seas valiente; no temas ni desmayes, porque Jehová tu Dios estará contigo en dondequiera que vayas."
-  }
-];
-
 export default function Home() {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const currentVerse = verses[currentIndex];
+  const [searchQuery, setSearchQuery] = useState('');
+  const [verse, setVerse] = useState<VerseData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const getRandomVerse = () => {
-    const randomIndex = Math.floor(Math.random() * verses.length);
-    setCurrentIndex(randomIndex);
+  const searchVerse = async (query: string) => {
+    if (!query.trim()) {
+      setError('Por favor ingresa una referencia bíblica');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`https://bible-api.com/${encodeURIComponent(query)}?translation=kjv`);
+      
+      if (!response.ok) {
+        throw new Error('Verso no encontrado');
+      }
+
+      const data = await response.json();
+      setVerse({
+        reference: data.reference,
+        text: data.text.trim(),
+        translation_id: data.translation_id,
+        translation_name: data.translation_name
+      });
+    } catch (err) {
+      setError('No se pudo encontrar el verso. Intenta con otro formato (ej: John 3:16, Psalms 23:1-6)');
+      setVerse(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const nextVerse = () => {
-    setCurrentIndex((prev) => (prev + 1) % verses.length);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    searchVerse(searchQuery);
   };
 
-  const prevVerse = () => {
-    setCurrentIndex((prev) => (prev - 1 + verses.length) % verses.length);
+  const quickSearch = (query: string) => {
+    setSearchQuery(query);
+    searchVerse(query);
   };
+
+  const popularVerses = [
+    'John 3:16',
+    'Psalms 23:1',
+    'Philippians 4:13',
+    'Proverbs 3:5-6',
+    'Romans 8:28',
+    'Jeremiah 29:11',
+    'Matthew 11:28',
+    'Isaiah 40:31',
+    'Psalms 46:1',
+    'Joshua 1:9'
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50">
       <div className="max-w-4xl mx-auto px-6 py-12">
         {/* Header */}
         <header className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-3">
-            📖 Versos Bíblicos
+            📖 Bible Verse Search
           </h1>
           <p className="text-gray-600 text-lg">
-            Versión Reina Valera 1960
+            King James Version (KJV)
           </p>
         </header>
 
-        {/* Verse Card */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12 mb-8 border border-gray-100">
-          <div className="text-center mb-6">
-            <span className="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-semibold">
-              {currentVerse.book} {currentVerse.chapter}:{currentVerse.verse}
-            </span>
-          </div>
-          
-          <blockquote className="text-xl md:text-2xl text-gray-700 leading-relaxed text-center italic mb-8">
-            "{currentVerse.text}"
-          </blockquote>
-
-          <div className="flex items-center justify-center text-sm text-gray-500">
-            <span>{currentIndex + 1} de {verses.length}</span>
-          </div>
-        </div>
-
-        {/* Controls */}
-        <div className="flex flex-wrap gap-4 justify-center">
-          <button
-            onClick={prevVerse}
-            className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
-          >
-            ← Anterior
-          </button>
-          
-          <button
-            onClick={getRandomVerse}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-md"
-          >
-            🎲 Verso Aleatorio
-          </button>
-          
-          <button
-            onClick={nextVerse}
-            className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
-          >
-            Siguiente →
-          </button>
-        </div>
-
-        {/* Verse List */}
-        <div className="mt-16">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-            Todos los Versos
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            {verses.map((verse, index) => (
+        {/* Search Form */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-gray-100">
+          <form onSubmit={handleSubmit} className="mb-6">
+            <div className="flex flex-col md:flex-row gap-3">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar verso (ej: John 3:16, Psalms 23:1-6)"
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
               <button
-                key={verse.id}
-                onClick={() => setCurrentIndex(index)}
-                className={`text-left p-4 rounded-lg border-2 transition-all ${
-                  currentIndex === index
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 bg-white hover:border-blue-300'
-                }`}
+                type="submit"
+                disabled={loading}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                <div className="font-semibold text-blue-700 mb-2">
-                  {verse.book} {verse.chapter}:{verse.verse}
-                </div>
-                <div className="text-sm text-gray-600 line-clamp-2">
-                  {verse.text}
-                </div>
+                {loading ? 'Buscando...' : '🔍 Buscar'}
+              </button>
+            </div>
+          </form>
+
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          {verse && (
+            <div className="border-t pt-6">
+              <div className="text-center mb-6">
+                <span className="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-semibold">
+                  {verse.reference}
+                </span>
+              </div>
+              
+              <blockquote className="text-xl md:text-2xl text-gray-700 leading-relaxed mb-6 whitespace-pre-line">
+                {verse.text}
+              </blockquote>
+
+              <div className="text-center text-sm text-gray-500">
+                {verse.translation_name}
+              </div>
+            </div>
+          )}
+
+          {!verse && !loading && !error && (
+            <div className="text-center text-gray-500 py-8">
+              Busca cualquier verso de la Biblia usando el formato: Libro Capítulo:Versículo
+              <br />
+              <span className="text-sm">(Ejemplo: John 3:16 o Psalms 23:1-6)</span>
+            </div>
+          )}
+        </div>
+
+        {/* Popular Verses */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+            Versos Populares
+          </h2>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {popularVerses.map((verseRef) => (
+              <button
+                key={verseRef}
+                onClick={() => quickSearch(verseRef)}
+                className="p-4 bg-white hover:bg-blue-50 border-2 border-gray-200 hover:border-blue-400 rounded-lg transition-all text-center font-medium text-gray-700"
+              >
+                {verseRef}
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Instructions */}
+        <div className="bg-white rounded-lg shadow p-6 border border-gray-100">
+          <h3 className="font-bold text-gray-800 mb-3">Cómo usar:</h3>
+          <ul className="space-y-2 text-gray-600">
+            <li>• <strong>Un solo verso:</strong> John 3:16</li>
+            <li>• <strong>Rango de versos:</strong> Psalms 23:1-6</li>
+            <li>• <strong>Capítulo completo:</strong> Genesis 1</li>
+            <li>• También puedes usar abreviaciones: Jn 3:16, Ps 23:1</li>
+          </ul>
         </div>
       </div>
     </div>
